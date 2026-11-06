@@ -1,3 +1,6 @@
+## In preparation
+
+
 # RFM_customer_segmentation
 
 ### Data source and licence
