@@ -2,7 +2,7 @@
 
 Customer segmentation based on RFM (Recency, Frequency, Monetary) analysis of retail transactions, implemented in SQL (PostgreSQL) and Python.
 
-**Status:** in progress – data quality assessment completed, data cleaning next.
+**Status:** in progress – data quality assessment and data cleaning completed, RFM calculation next.
 
 ## Data source and licence
 
@@ -22,6 +22,7 @@ PostgreSQL (pgAdmin), Python (pandas, SQLAlchemy, plotly), Jupyter Notebook.
 |---|---|
 | `sql/1_import_data.sql` | Creation of the `retail_data` table |
 | `sql/2_data_quality_check.sql` | Data quality checks |
+| `sql/3_data_cleaning.sql` | Data cleaning (staging views `retail_clean_stage1`–`8`, final table `retail_clean`) |
 | `notebooks/dataset_preparation.ipynb` | Dataset preparation |
 
 ## Data dictionary
@@ -51,9 +52,9 @@ Other observations:
 | Cancellations only | 61 | 1.03% |
 | Total | 5,942 | 100.00% |
 
-## Planned data cleaning
+## Data cleaning
 
-The raw table `retail_data` is left unchanged; the cleaned data will be stored separately as `retail_clean`.
+The raw table `retail_data` is left unchanged; the cleaned data is stored separately as `retail_clean` (`sql/3_data_cleaning.sql`). Each step is a separate view (`retail_clean_stage1`–`8`), the final table is built from the last one.
 
 **Standardise**
 
@@ -77,3 +78,19 @@ The raw table `retail_data` is left unchanged; the cleaned data will be stored s
 | Customers with cancellations only (61) | Exclude |
 
 Cancellations (invoices starting with "C") are kept in the cleaned data; how they enter Recency, Frequency and Monetary is decided in the next stage.
+
+### Result of the cleaning
+
+| Step | Rows | Customers |
+|---|---:|---:|
+| Raw data (`retail_data`) | 1,067,371 | 5,942 |
+| After standardisation (`CustomerID`, `StockCode`) | 1,067,371 | 5,942 |
+| After excluding NULL `CustomerID`, `UnitPrice` <= 0 and negative `Quantity` outside cancellations | 824,293 | 5,939 |
+| After keeping product `StockCode` only | 820,565 | 5,875 |
+| After removing identical rows | 794,163 | 5,875 |
+| After excluding customers with cancellations only | 794,076 | 5,852 |
+| **Final `retail_clean`** (after standardising `Description`, `Country`, `InvoiceDate` and removing 4 rows that became identical) | **794,072** | **5,852** |
+
+`retail_clean` contains 43,851 invoices; it has no NULL `Description` or `Country`.
+
+Of the 90 customers excluded in total, 61 had cancellations only; the remaining 29 had no rows left after the row-level filters. Checks on the final table: no customer with cancellations only, no identical rows, one country per customer, one timestamp per invoice, one description per `StockCode`, no `UnitPrice` <= 0, no negative `Quantity` outside cancellations, only product `StockCode` values, no `EIRE`.
