@@ -2,7 +2,7 @@
 
 Customer segmentation based on RFM (Recency, Frequency, Monetary) analysis of retail transactions, implemented in SQL (PostgreSQL) and Python.
 
-**Status:** in progress – data quality assessment completed, data cleaning script prepared.
+**Status:** in progress – data quality assessment completed, data cleaning next.
 
 ## Data source and licence
 
@@ -22,7 +22,6 @@ PostgreSQL (pgAdmin), Python (pandas, SQLAlchemy, plotly), Jupyter Notebook.
 |---|---|
 | `sql/1_import_data.sql` | Creation of the `retail_data` table |
 | `sql/2_data_quality_check.sql` | Data quality checks |
-| `sql/3_data_cleaning.sql` | Data cleaning: builds `retail_clean` and logs row counts per step |
 | `notebooks/dataset_preparation.ipynb` | Dataset preparation |
 
 ## Data dictionary
