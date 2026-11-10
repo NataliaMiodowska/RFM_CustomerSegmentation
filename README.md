@@ -125,15 +125,15 @@ The metrics are calculated from `retail_clean` (`sql/4_rfm_metrics.sql`), one ro
 
 Each customer from `rfm_metrics` gets three scores from 1 to 5 (`sql/5_scoring.sql`, table `scoring`), calculated separately for Recency, Frequency and Monetary with `NTILE(5)`, i.e. into five groups of (almost) equal size.
 
-| Metric | Sort order in `NTILE` | Score 1 means |
+| Metric | Sort order in `NTILE` | Score 5 means |
 |---|---|---|
-| Recency | ascending | most recent customers |
-| Frequency | descending | most frequent customers |
-| Monetary | descending | highest net value |
+| Recency | descending | most recent customers |
+| Frequency | ascending | most frequent customers |
+| Monetary | ascending | highest net value |
 
 **Assumptions**
 
-- Score 1 is the best group in every dimension, a lower score is better.
+- Score 5 is the best group in every dimension, a higher score is better.
 - Customers with the same metric value can fall into different groups (`NTILE` splits ties), so `customer_id` is added as a second sort key to make the result repeatable.
 
 **Validation**
