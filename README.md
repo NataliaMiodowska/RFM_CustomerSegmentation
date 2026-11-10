@@ -2,7 +2,7 @@
 
 Customer segmentation based on RFM (Recency, Frequency, Monetary) analysis of retail transactions, implemented in SQL (PostgreSQL) and Python.
 
-**Status:** in progress – data quality assessment and data cleaning completed, RFM calculation next.
+**Status:** in progress – data quality assessment and data cleaning completed, RFM metrics calculated, scoring and segmentation next.
 
 ## Data source and licence
 
@@ -23,6 +23,7 @@ PostgreSQL (pgAdmin), Python (pandas, SQLAlchemy, plotly), Jupyter Notebook.
 | `sql/1_import_data.sql` | Creation of the `retail_data` table |
 | `sql/2_data_quality_check.sql` | Data quality checks |
 | `sql/3_data_cleaning.sql` | Data cleaning (staging views `retail_clean_stage1`–`8`, final table `retail_clean`) |
+| `sql/4_rfm_metrics.sql` | Calculation of Recency, Frequency and Monetary per customer (table `rfm_metrics`) and validation checks |
 | `notebooks/dataset_preparation.ipynb` | Dataset preparation |
 
 ## Data dictionary
@@ -77,7 +78,7 @@ The raw table `retail_data` is left unchanged; the cleaned data is stored separa
 | Fully identical rows | Keep one copy of each |
 | Customers with cancellations only (61) | Exclude |
 
-Cancellations (invoices starting with "C") are kept in the cleaned data; how they enter Recency, Frequency and Monetary is decided in the next stage.
+Cancellations (invoices starting with "C") are kept in the cleaned data; how they enter Recency, Frequency and Monetary is described in the RFM metrics section.
 
 ### Result of the cleaning
 
@@ -94,3 +95,27 @@ Cancellations (invoices starting with "C") are kept in the cleaned data; how the
 `retail_clean` contains 43,851 invoices; it has no NULL `Description` or `Country`.
 
 Of the 90 customers excluded in total, 61 had cancellations only; the remaining 29 had no rows left after the row-level filters. Checks on the final table: no customer with cancellations only, no identical rows, one country per customer, one timestamp per invoice, one description per `StockCode`, no `UnitPrice` <= 0, no negative `Quantity` outside cancellations, only product `StockCode` values, no `EIRE`.
+
+## RFM metrics
+
+The metrics are calculated from `retail_clean` (`sql/4_rfm_metrics.sql`), one row per `customer_id` (table `rfm_metrics`). The input stays at the level of invoice lines; the aggregation to customer level is the core of this stage.
+
+| Metric | Definition |
+|---|---|
+| Recency | Days between the customer's latest invoice date in `retail_clean` and the reference date (lower = more recent) |
+| Frequency | Number of distinct regular invoices (invoices starting with "C" are not counted) |
+| Monetary | Sum of `quantity * unit_price` over all of the customer's lines, i.e. net of cancellations |
+
+**Assumptions**
+
+- Reference date: 2011-12-10, the day after the last transaction in `retail_clean` (2011-12-09). It is fixed because the analysed period (2009-2011) is closed.
+- A cancellation is not a purchase, so it does not increase Frequency; it reduces Monetary because a returned product reduces the customer's real value.
+- Recency uses the latest invoice date including cancellations, as the last contact with the customer.
+- Customers with Monetary <= 0 (net value of zero or below, e.g. a purchase fully cancelled) are excluded from RFM: 20 of 5,852 customers. The final `rfm_metrics` table contains 5,832 customers.
+
+**Validation**
+
+- One row per customer (no duplicated `customer_id`).
+- Before the exclusion: no invalid Recency or Frequency, 20 customers with Monetary <= 0. After the exclusion: 5,832 customers and no NULL or invalid values in any of the three metrics.
+- Before the exclusion, the total of Monetary equals the total value of all lines in `retail_clean` (16,359,435.22). After the exclusion the totals are compared on the same customers (those in `rfm_metrics`) and are equal (16,360,984.68).
+- Manual check of selected customers against their invoice lines (e.g. customer 12346: 3 regular invoices, Frequency = 3; one purchase and its full cancellation offset each other).
