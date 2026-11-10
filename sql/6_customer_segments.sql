@@ -19,7 +19,7 @@ SELECT
           OR (RECENCY_SCORE = 3 AND (FREQUENCY_SCORE + MONETARY_SCORE) BETWEEN 8 AND 10) 
             THEN 'Loyal'
 
-        -- Recent Occasional / Promising: (recency 5 and frequency_monetary 5–7) or (recency 4 and frequency_monetary 2–4)
+        --  Promising: (recency 5 and frequency_monetary 5–7) or (recency 4 and frequency_monetary 2–4)
         WHEN (RECENCY_SCORE = 5 AND (FREQUENCY_SCORE + MONETARY_SCORE) BETWEEN 5 AND 7)
           OR (RECENCY_SCORE = 4 AND (FREQUENCY_SCORE + MONETARY_SCORE) BETWEEN 2 AND 4) 
             THEN 'Promising'
