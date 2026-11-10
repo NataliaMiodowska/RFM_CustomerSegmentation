@@ -2,7 +2,7 @@
 
 Customer segmentation based on RFM (Recency, Frequency, Monetary) analysis of retail transactions, implemented in SQL (PostgreSQL) and Python.
 
-**Status:** in progress – data quality assessment and data cleaning completed, RFM metrics calculated, scoring and segmentation next.
+**Status:** in progress – data quality assessment and data cleaning completed, RFM metrics calculated, RFM scoring completed, segmentation next.
 
 ## Data source and licence
 
@@ -24,6 +24,7 @@ PostgreSQL (pgAdmin), Python (pandas, SQLAlchemy, plotly), Jupyter Notebook.
 | `sql/2_data_quality_check.sql` | Data quality checks |
 | `sql/3_data_cleaning.sql` | Data cleaning (staging views `retail_clean_stage1`–`8`, final table `retail_clean`) |
 | `sql/4_rfm_metrics.sql` | Calculation of Recency, Frequency and Monetary per customer (table `rfm_metrics`) and validation checks |
+| `sql/5_scoring.sql` | Assigning Recency, Frequency and Monetary scores (1–5) per customer (table `scoring`) and a check of the group sizes |
 | `notebooks/dataset_preparation.ipynb` | Dataset preparation |
 
 ## Data dictionary
@@ -119,3 +120,22 @@ The metrics are calculated from `retail_clean` (`sql/4_rfm_metrics.sql`), one ro
 - Before the exclusion: no invalid Recency or Frequency, 20 customers with Monetary <= 0. After the exclusion: 5,832 customers and no NULL or invalid values in any of the three metrics.
 - Before the exclusion, the total of Monetary equals the total value of all lines in `retail_clean` (16,359,435.22). After the exclusion the totals are compared on the same customers (those in `rfm_metrics`) and are equal (16,360,984.68).
 - Manual check of selected customers against their invoice lines (e.g. customer 12346: 3 regular invoices, Frequency = 3; one purchase and its full cancellation offset each other).
+
+## RFM scoring
+
+Each customer from `rfm_metrics` gets three scores from 1 to 5 (`sql/5_scoring.sql`, table `scoring`), calculated separately for Recency, Frequency and Monetary with `NTILE(5)`, i.e. into five groups of (almost) equal size.
+
+| Metric | Sort order in `NTILE` | Score 1 means |
+|---|---|---|
+| Recency | ascending | most recent customers |
+| Frequency | descending | most frequent customers |
+| Monetary | descending | highest net value |
+
+**Assumptions**
+
+- Score 1 is the best group in every dimension, a lower score is better.
+- Customers with the same metric value can fall into different groups (`NTILE` splits ties), so `customer_id` is added as a second sort key to make the result repeatable.
+
+**Validation**
+
+- The group sizes are the same for all three metrics: 5,832 customers split into two groups of 1,167 and three groups of 1,166 (about 20% each), see `notes/distribution_in_scoring.csv`. The result was identical after re-running the script with the tie-breaker.
