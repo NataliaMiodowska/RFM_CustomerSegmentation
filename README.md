@@ -2,7 +2,7 @@
 
 Customer segmentation based on RFM (Recency, Frequency, Monetary) analysis of retail transactions, implemented in SQL (PostgreSQL) and Python.
 
-**Status:** in progress – data quality assessment and data cleaning completed, RFM metrics calculated, RFM scoring and customer segmentation completed, Python analysis and recommendations next.
+**Status:** data quality assessment, data cleaning, RFM metrics, RFM scoring, customer segmentation and segment analysis in Python completed.
 
 ## Data source and licence
 
@@ -27,6 +27,7 @@ PostgreSQL (pgAdmin), Python (pandas, SQLAlchemy, plotly), Jupyter Notebook.
 | `sql/5_scoring.sql` | Assigning Recency, Frequency and Monetary scores (1–5) per customer (table `scoring`) and a check of the group sizes |
 | `sql/6_customer_segments.sql` | Mapping of the scores to seven segments (tables `segments` and `scoring_and_segments`), segment averages of R, F, M and the business summary per segment (table `business_summary`) |
 | `notebooks/dataset_preparation.ipynb` | Dataset preparation |
+| `notebooks/segment_analysis.ipynb` | Segment analysis in Python: segment size vs revenue share, R × FM heatmap, RFM profile by segment |
 
 ## Data dictionary
 
@@ -157,7 +158,7 @@ Customers are assigned to seven segments with a `CASE` expression (`sql/6_custom
 
 **Assumptions**
 
-- The rules do not overlap and cover all 25 combinations of R and FM; no customer is left unassigned (5,832 customers in total).
+- The rules do not overlap and cover all 45 combinations of R (1–5) and FM (2–10); no customer is left unassigned (5,832 customers in total).
 - `Recent Occasional` is not named "New Customers" on purpose: the scores do not show whether the first purchase was recent, so the segment includes both new customers and occasional buyers who happened to purchase recently.
 - The Top Customers rule was tightened from FM 8–10 to FM 9–10, because the first version covered 1,296 customers (22.2%), which is too many for a top segment. Customers with FM = 8 moved to Loyal.
 - The 20 customers with Monetary <= 0 are not in `rfm_metrics` and therefore have no segment; percentages below are calculated on the 5,832 segmented customers.
@@ -190,3 +191,31 @@ The summary is stored in the table `business_summary`, one row per segment. Reve
 | Promising | 526 | 9.02 | 356,786.25 | 2.18 | 257.98 |
 | Recent Occasional | 119 | 2.04 | 34,768.88 | 0.21 | 195.33 |
 | **Total** | **5,832** | **100.00** | **16,360,984.68** | **100.00** | |
+
+## Segment analysis
+
+The charts are in `notebooks/segment_analysis.ipynb`, based on the tables `scoring_and_segments` and `business_summary`:
+
+- **Segment size vs revenue share**: % of customers and % of revenue per segment.
+- **R × FM heatmap**: number of customers in each combination of the R score and FM (F + M), with the segment name in every cell. It shows how the rules split the customers.
+- **RFM profile by segment**: average Recency, Frequency and Monetary per segment; the colour is normalised per metric, because the three metrics have different scales.
+
+### Key findings
+
+- Revenue is concentrated in two segments. Top Customers (17.23% of customers) generate 66.08% of revenue and Loyal (19.10%) a further 16.01%; together 36.33% of customers bring 82.09% of revenue.
+- Top Customers also have the highest average order value (536.54) and the highest average Frequency (20.05 orders), so their value comes from both frequent and larger orders.
+- Immediate Attention is a small segment (251 customers, 4.30%) with a higher revenue share (5.82%) than Need Attention (1,170 customers, 5.54%). Its average order value (434.24) is second only to Top Customers, but the average customer's last purchase was 336.63 days before the reference date.
+- Lost is the largest segment (1,647 customers, 28.24%) and brings 4.15% of revenue, with an average Recency of 465.94 days and Frequency of 1.48.
+- Promising and Recent Occasional bought recently (average Recency 21.30 and 9.97 days) but rarely (2.63 and 1.50 orders) and for a low value; together they account for 11.06% of customers and 2.39% of revenue.
+- In the R × FM heatmap, 432 of the 1,114 Loyal customers have R = 3 and FM 8–10: high value, but less recent purchases. They are the group closest to moving into Immediate Attention.
+
+### Recommendations
+
+| Segment | Priority | Suggested action |
+|---|---|---|
+| Top Customers | Retain | Loyalty programme, early access to new products, personal contact; this segment carries 66.08% of revenue |
+| Loyal | Grow | Cross-sell and volume incentives to move customers towards Top Customers; monitor the 432 customers with R = 3 |
+| Immediate Attention | Win back first | Targeted, personalised win-back campaign; few customers (251) with a high past value (average Monetary 3,795.74) |
+| Need Attention | Reactivate | Reminder and reactivation offers at a moderate cost |
+| Promising, Recent Occasional | Develop | Follow-up after the purchase and an incentive for the next order to build purchase frequency |
+| Lost | Low cost | Automated, low-cost campaigns only; large segment (28.24% of customers) with a small revenue share (4.15%) |
