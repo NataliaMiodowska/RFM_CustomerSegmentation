@@ -25,7 +25,7 @@ PostgreSQL (pgAdmin), Python (pandas, SQLAlchemy, plotly), Jupyter Notebook.
 | `sql/3_data_cleaning.sql` | Data cleaning (staging views `retail_clean_stage1`–`8`, final table `retail_clean`) |
 | `sql/4_rfm_metrics.sql` | Calculation of Recency, Frequency and Monetary per customer (table `rfm_metrics`) and validation checks |
 | `sql/5_scoring.sql` | Assigning Recency, Frequency and Monetary scores (1–5) per customer (table `scoring`) and a check of the group sizes |
-| `sql/6_customer_segments.sql` | Mapping of the scores to seven segments (table `segments`), segment averages of R, F, M and the business summary per segment |
+| `sql/6_customer_segments.sql` | Mapping of the scores to seven segments (tables `segments` and `scoring_and_segments`), segment averages of R, F, M and the business summary per segment (table `business_summary`) |
 | `notebooks/dataset_preparation.ipynb` | Dataset preparation |
 
 ## Data dictionary
@@ -143,7 +143,7 @@ Each customer from `rfm_metrics` gets three scores from 1 to 5 (`sql/5_scoring.s
 
 ## Customer segments
 
-Customers are assigned to seven segments with a `CASE` expression (`sql/6_customer_segments.sql`, table `segments`). The rules use the Recency score (R) and the sum of the Frequency and Monetary scores (FM = F + M, range 2–10), so the segments are based on how recently a customer bought (R) and on their overall value (F and M together). Scores: 5 = best.
+Customers are assigned to seven segments with a `CASE` expression (`sql/6_customer_segments.sql`, table `segments`). The table `scoring_and_segments` combines the segment with the scores and metrics from `scoring` (one row per customer, 5,832 customers) and is the input for the analysis in Python. The rules use the Recency score (R) and the sum of the Frequency and Monetary scores (FM = F + M, range 2–10), so the segments are based on how recently a customer bought (R) and on their overall value (F and M together). Scores: 5 = best.
 
 | Segment | Rule | Description |
 |---|---|---|
@@ -178,7 +178,7 @@ Average values per customer, calculated from `rfm_metrics`.
 
 ### Business summary
 
-Revenue is net of cancellations (`quantity * unit_price` over all lines of the segment's customers). Average order value is the segment's revenue divided by the number of its regular invoices (invoices starting with "C" are not counted), the same definition of an order as in Frequency.
+The summary is stored in the table `business_summary`, one row per segment. Revenue is net of cancellations (`quantity * unit_price` over all lines of the segment's customers). Average order value is the segment's revenue divided by the number of its regular invoices (invoices starting with "C" are not counted), the same definition of an order as in Frequency.
 
 | Segment | Customers | % of customers | Revenue | % of revenue | Avg order value |
 |---|---:|---:|---:|---:|---:|
