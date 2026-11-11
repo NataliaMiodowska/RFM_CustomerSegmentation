@@ -4,6 +4,10 @@ Customer segmentation based on RFM (Recency, Frequency, Monetary) analysis of re
 
 **Status:** data quality assessment, data cleaning, RFM metrics, RFM scoring, customer segmentation and segment analysis in Python completed.
 
+## Business question
+
+Which customer groups generate most of the revenue, which valuable customers are at risk of being lost, and which actions should be taken for each group?
+
 ## Data source and licence
 
 Chen, D. (2012). *Online Retail II* [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5CG6D
@@ -28,6 +32,25 @@ PostgreSQL (pgAdmin), Python (pandas, SQLAlchemy, plotly), Jupyter Notebook.
 | `sql/6_customer_segments.sql` | Mapping of the scores to seven segments (tables `segments` and `scoring_and_segments`), segment averages of R, F, M and the business summary per segment (table `business_summary`) |
 | `notebooks/dataset_preparation.ipynb` | Dataset preparation |
 | `notebooks/segment_analysis.ipynb` | Segment analysis in Python: segment size vs revenue share, R × FM heatmap, RFM profile by segment |
+| `requirements.txt` | Python packages used in the notebooks |
+
+## How to run
+
+1. Download *Online Retail II* from the [UCI Machine Learning Repository](https://doi.org/10.24432/C5CG6D) and save `online_retail_II.xlsx` in `data/`.
+2. Create a Python environment and install the packages:
+
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. Run `notebooks/dataset_preparation.ipynb`. It merges the two sheets of the file into `data/retail_II_2009_2011.csv`.
+4. Create a PostgreSQL database and run `sql/1_import_data.sql` to create the `retail_data` table.
+5. Import `data/retail_II_2009_2011.csv` into `retail_data` (e.g. pgAdmin *Import/Export Data*: format CSV, header on, delimiter `,`). The column order of the file matches the table.
+6. Run `sql/2_data_quality_check.sql` to `sql/6_customer_segments.sql` in order (e.g. in the pgAdmin Query Tool). `2_data_quality_check.sql` only runs checks; the other files create the tables used later.
+7. Create a `.env` file in the repository root with the connection details: `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`.
+8. Run `notebooks/segment_analysis.ipynb`. The charts are rendered as PNG images, which requires `kaleido` (installed from `requirements.txt`) and Google Chrome.
 
 ## Data dictionary
 
@@ -211,11 +234,21 @@ The charts are in `notebooks/segment_analysis.ipynb`, based on the tables `scori
 
 ### Recommendations
 
-| Segment | Priority | Suggested action |
-|---|---|---|
-| Top Customers | Retain | Loyalty programme, early access to new products, personal contact; this segment carries 66.08% of revenue |
-| Loyal | Grow | Cross-sell and volume incentives to move customers towards Top Customers; monitor the 432 customers with R = 3 |
-| Immediate Attention | Win back first | Targeted, personalised win-back campaign; few customers (251) with a high past value (average Monetary 3,795.74) |
-| Need Attention | Reactivate | Reminder and reactivation offers at a moderate cost |
-| Promising, Recent Occasional | Develop | Follow-up after the purchase and an incentive for the next order to build purchase frequency |
-| Lost | Low cost | Automated, low-cost campaigns only; large segment (28.24% of customers) with a small revenue share (4.15%) |
+| Segment | Priority | Suggested action | KPI to track |
+|---|---|---|---|
+| Top Customers | Retain | Loyalty programme, early access to new products, personal contact; this segment carries 66.08% of revenue | Retention rate (share still in Top Customers at the next scoring), segment's revenue share |
+| Loyal | Grow | Cross-sell and volume incentives to move customers towards Top Customers; monitor the 432 customers with R = 3 | Share of customers moving to Top Customers, average order value |
+| Immediate Attention | Win back first | Targeted, personalised win-back campaign; few customers (251) with a high past value (average Monetary 3,795.74) | Win-back rate (share with a new order after the campaign), revenue from won-back customers |
+| Need Attention | Reactivate | Reminder and reactivation offers at a moderate cost | Reactivation rate, share of customers moving to Lost |
+| Promising, Recent Occasional | Develop | Follow-up after the purchase and an incentive for the next order to build purchase frequency | Second-purchase rate, days to the next order |
+| Lost | Low cost | Automated, low-cost campaigns only; large segment (28.24% of customers) with a small revenue share (4.15%) | Reactivation rate compared with campaign cost |
+
+## Limitations
+
+- Rows without `CustomerID` (243,007, 22.77% of the raw data) cannot be assigned to a customer and are not part of the analysis.
+- The 20 customers with Monetary <= 0 are excluded from RFM and have no segment.
+- `NTILE(5)` splits customers with the same metric value into different groups, so the score boundaries depend partly on the tie-breaker (`customer_id`).
+- The segment rules (R and FM thresholds, including the tightened Top Customers rule) were set by judgement; F and M have equal weight in FM.
+- The scores do not show the date of the first purchase, so new customers cannot be separated from occasional ones (see `Recent Occasional`).
+- The data covers one online retailer from 2009-12 to 2011-12; the results describe that period and are not tested on later data.
+- The recommendations and KPIs are proposals; no campaign results are available to measure their effect.
